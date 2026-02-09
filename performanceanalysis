@@ -1,0 +1,715 @@
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Target, Search, AlertTriangle, CheckCircle, Database, Download, Copy, ChevronRight, ChevronLeft, Save, Trash2, Info, FileText } from 'lucide-react';
+
+const PerformanceAnalyzer = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showSavedMsg, setShowSavedMsg] = useState(false);
+
+  // Initial State based on HPT Framework
+  const initialState = {
+    projectTitle: '',
+    stakeholders: '',
+    // 1. Desired State
+    optimals: '',
+    standards: '',
+    standardsChecklist: [],
+    whoWantsIt: '',
+    // 2. Actual State
+    actuals: '',
+    evidence: '', 
+    evidenceChecklist: [],
+    // 3. The Gap
+    gapDescription: '',
+    gapCost: '', 
+    gapImportance: '', 
+    gapImpactChecklist: [],
+    // 4. Supports
+    existingSupports: '', 
+    supportsChecklist: [],
+    supportUsage: '', 
+    // 5. Interferences (Obstacles)
+    envObstacles: '', 
+    envChecklist: [],
+    incentiveObstacles: '', 
+    incentiveChecklist: [],
+    skillObstacles: '', 
+    skillChecklist: [],
+    // Additional Elements
+    exemplaryPerformers: '',
+    opportunities: '',
+    // Triangulation
+    dataSources: {
+      interviews: false,
+      observations: false,
+      documents: false,
+      surveys: false
+    },
+    recommendations: ''
+  };
+
+  const [formData, setFormData] = useState(initialState);
+
+  // Load from local storage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('hpt_analysis_data');
+    if (saved) {
+      try {
+        setFormData(JSON.parse(saved));
+      } catch (e) {
+        console.error("Error loading saved data", e);
+      }
+    }
+  }, []);
+
+  // Save to local storage on change
+  useEffect(() => {
+    localStorage.setItem('hpt_analysis_data', JSON.stringify(formData));
+  }, [formData]);
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleCheckbox = (field) => {
+    setFormData(prev => ({
+      ...prev,
+      dataSources: {
+        ...prev.dataSources,
+        [field]: !prev.dataSources[field]
+      }
+    }));
+  };
+
+  const handleMultiSelect = (field, option) => {
+    setFormData(prev => {
+      const currentList = prev[field] || [];
+      if (currentList.includes(option)) {
+        return { ...prev, [field]: currentList.filter(item => item !== option) };
+      } else {
+        return { ...prev, [field]: [...currentList, option] };
+      }
+    });
+  };
+
+  const manualSave = () => {
+    localStorage.setItem('hpt_analysis_data', JSON.stringify(formData));
+    setShowSavedMsg(true);
+    setTimeout(() => setShowSavedMsg(false), 2000);
+  };
+
+  const clearData = () => {
+    if(window.confirm("Are you sure? This will clear all your entries.")) {
+      setFormData(initialState);
+      localStorage.removeItem('hpt_analysis_data');
+      setCurrentStep(0);
+    }
+  };
+
+  // Helper to format checkbox lists for text export
+  const formatList = (list) => list && list.length > 0 ? `Selected Factors: ${list.join(', ')}\n` : '';
+  const formatListHTML = (list) => list && list.length > 0 ? `<p><strong>Selected Factors:</strong> ${list.join(', ')}</p>` : '';
+
+  // Export functions
+  const copyForClipboard = () => {
+    const report = `
+PERFORMANCE ANALYSIS REPORT
+Project: ${formData.projectTitle || 'Untitled'}
+Date: ${new Date().toLocaleDateString()}
+--------------------------------------------------
+
+1. WHAT IS DESIRED? (Optimals)
+--------------------------------------------------
+Desired Behavior/Outcome:
+${formData.optimals}
+
+Standards & Expectations:
+${formatList(formData.standardsChecklist)}${formData.standards}
+
+Stakeholders (Who wants this?):
+${formData.whoWantsIt}
+
+2. WHAT IS HAPPENING NOW? (Actuals)
+--------------------------------------------------
+Current Reality:
+${formData.actuals}
+
+Evidence Sources (Metrics/Samples):
+${formatList(formData.evidenceChecklist)}${formData.evidence}
+
+3. THE GAP
+--------------------------------------------------
+Gap Description:
+${formData.gapDescription}
+
+Impact/Cost of Gap:
+${formatList(formData.gapImpactChecklist)}${formData.gapCost}
+
+Importance (Why solve this?):
+${formData.gapImportance}
+
+4. EXISTING SUPPORTS
+--------------------------------------------------
+What is currently in place?
+${formatList(formData.supportsChecklist)}${formData.existingSupports}
+
+Is it being used?
+${formData.supportUsage}
+
+5. INTERFERENCES (Why is the gap happening?)
+--------------------------------------------------
+Environmental Barriers (Tools/Process):
+${formatList(formData.envChecklist)}${formData.envObstacles}
+
+Incentive/Motivation Barriers:
+${formatList(formData.incentiveChecklist)}${formData.incentiveObstacles}
+
+Skill/Knowledge Barriers:
+${formatList(formData.skillChecklist)}${formData.skillObstacles}
+
+ADDITIONAL ANALYSIS
+--------------------------------------------------
+Exemplary Performers (What do stars do differently?):
+${formData.exemplaryPerformers}
+
+Opportunities for Improvement:
+${formData.opportunities}
+
+DATA TRIANGULATION
+--------------------------------------------------
+Used: ${Object.entries(formData.dataSources).filter(([k,v]) => v).map(([k]) => k).join(', ') || 'None selected'}
+
+RECOMMENDATIONS
+--------------------------------------------------
+${formData.recommendations}
+    `;
+    
+    navigator.clipboard.writeText(report);
+    alert("Report copied to clipboard! You can paste this into Word, Docs, or an email.");
+  };
+
+  const downloadWordDoc = () => {
+    const reportHTML = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Performance Analysis</title></head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h1 style="color: #EC4899;">PERFORMANCE ANALYSIS REPORT</h1>
+        <p><strong>Project:</strong> ${formData.projectTitle || 'Untitled'}</p>
+        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+        <hr/>
+        
+        <h2 style="color: #F87171; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">1. WHAT IS DESIRED? (Optimals)</h2>
+        <p><strong>Desired Behavior/Outcome:</strong><br/>${formData.optimals ? formData.optimals.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Standards & Expectations:</strong></p>
+        ${formatListHTML(formData.standardsChecklist)}
+        <p>${formData.standards ? formData.standards.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Stakeholders (Who wants this?):</strong><br/>${formData.whoWantsIt ? formData.whoWantsIt.replace(/\n/g, '<br/>') : 'N/A'}</p>
+
+        <h2 style="color: #F87171; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">2. WHAT IS HAPPENING NOW? (Actuals)</h2>
+        <p><strong>Current Reality:</strong><br/>${formData.actuals ? formData.actuals.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Evidence Sources:</strong></p>
+        ${formatListHTML(formData.evidenceChecklist)}
+        <p>${formData.evidence ? formData.evidence.replace(/\n/g, '<br/>') : 'N/A'}</p>
+
+        <h2 style="color: #EC4899; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">3. THE GAP</h2>
+        <p><strong>Description:</strong><br/>${formData.gapDescription ? formData.gapDescription.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Impact/Cost:</strong></p>
+        ${formatListHTML(formData.gapImpactChecklist)}
+        <p>${formData.gapCost ? formData.gapCost.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Importance:</strong><br/>${formData.gapImportance ? formData.gapImportance.replace(/\n/g, '<br/>') : 'N/A'}</p>
+
+        <h2 style="color: #F87171; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">4. EXISTING SUPPORTS</h2>
+        <p><strong>What exists now?</strong></p>
+        ${formatListHTML(formData.supportsChecklist)}
+        <p>${formData.existingSupports ? formData.existingSupports.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Is it used?</strong><br/>${formData.supportUsage ? formData.supportUsage.replace(/\n/g, '<br/>') : 'N/A'}</p>
+
+        <h2 style="color: #F87171; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">5. INTERFERENCES</h2>
+        <p><strong>Environment & Tools:</strong></p>
+        ${formatListHTML(formData.envChecklist)}
+        <p>${formData.envObstacles ? formData.envObstacles.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        
+        <p><strong>Incentives:</strong></p>
+        ${formatListHTML(formData.incentiveChecklist)}
+        <p>${formData.incentiveObstacles ? formData.incentiveObstacles.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        
+        <p><strong>Skills:</strong></p>
+        ${formatListHTML(formData.skillChecklist)}
+        <p>${formData.skillObstacles ? formData.skillObstacles.replace(/\n/g, '<br/>') : 'N/A'}</p>
+
+        <h2 style="color: #F87171; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">ADDITIONAL ANALYSIS</h2>
+        <p><strong>Exemplary Performers:</strong><br/>${formData.exemplaryPerformers ? formData.exemplaryPerformers.replace(/\n/g, '<br/>') : 'N/A'}</p>
+        <p><strong>Data Sources Used:</strong> ${Object.entries(formData.dataSources).filter(([k,v]) => v).map(([k]) => k).join(', ') || 'None selected'}</p>
+
+        <h2 style="color: #EC4899; border-bottom: 1px solid #FBCFE8; padding-bottom: 5px;">RECOMMENDATIONS</h2>
+        <p>${formData.recommendations ? formData.recommendations.replace(/\n/g, '<br/>') : 'N/A'}</p>
+      </body>
+      </html>
+    `;
+    
+    const blob = new Blob(['\ufeff', reportHTML], {
+        type: 'application/msword'
+    });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = `performance_analysis_${new Date().toISOString().slice(0,10)}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  };
+
+  const downloadCSV = () => {
+    // Flatten the object for CSV
+    const rows = [
+      ['Category', 'Field', 'Response', 'Selected Checkboxes'],
+      ['Context', 'Project Name', formData.projectTitle, ''],
+      ['Context', 'Stakeholders', formData.stakeholders, ''],
+      ['1. Desired', 'Optimals', formData.optimals, ''],
+      ['1. Desired', 'Standards', formData.standards, formData.standardsChecklist.join('; ')],
+      ['1. Desired', 'Who wants it', formData.whoWantsIt, ''],
+      ['2. Actuals', 'Current State', formData.actuals, ''],
+      ['2. Actuals', 'Evidence', formData.evidence, formData.evidenceChecklist.join('; ')],
+      ['3. Gap', 'Description', formData.gapDescription, ''],
+      ['3. Gap', 'Cost/Impact', formData.gapCost, formData.gapImpactChecklist.join('; ')],
+      ['4. Supports', 'Existing Aids', formData.existingSupports, formData.supportsChecklist.join('; ')],
+      ['4. Supports', 'Usage', formData.supportUsage, ''],
+      ['5. Interference', 'Environment', formData.envObstacles, formData.envChecklist.join('; ')],
+      ['5. Interference', 'Incentives', formData.incentiveObstacles, formData.incentiveChecklist.join('; ')],
+      ['5. Interference', 'Skills', formData.skillObstacles, formData.skillChecklist.join('; ')],
+      ['Analysis', 'Exemplary Performers', formData.exemplaryPerformers, ''],
+      ['Recommendations', 'Plan', formData.recommendations, '']
+    ];
+
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + rows.map(e => e.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `performance_analysis_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const CheckboxGroup = ({ options, selected, field }) => (
+    <div className="flex flex-wrap gap-2 mb-3">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          onClick={() => handleMultiSelect(field, opt)}
+          className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+            selected.includes(opt)
+              ? 'bg-pink-500 text-white border-pink-500' // Pink for active
+              : 'bg-white text-gray-600 border-gray-300 hover:bg-pink-100' // Lighter pink hover
+          }`}
+        >
+          {selected.includes(opt) ? '✓ ' : '+ '}{opt}
+        </button>
+      ))}
+    </div>
+  );
+
+  const steps = [
+    {
+      title: "Context & Desired State",
+      icon: <Target className="w-6 h-6" />,
+      content: (
+        <div className="space-y-6">
+          {/* Analysis Tip */}
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+            <h3 className="font-bold text-blue-800 flex items-center gap-2">
+              <Info className="w-4 h-4"/> Analysis Tip:
+            </h3>
+            <p className="text-sm text-blue-800 mt-1">Start with "Optimals." Don't just ask what the problem is; ask what it looks like when it's done perfectly. Look for hard documents, vision statements, and standards.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Project Name / Context</label>
+              <input 
+                type="text" 
+                className="w-full p-2 border rounded-md focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.projectTitle}
+                onChange={(e) => handleChange('projectTitle', e.target.value)}
+                placeholder="e.g., Customer Service Response Time Improvement"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">1. What is Desired? (Optimals)</label>
+              <textarea 
+                className="w-full p-2 border rounded-md h-32 focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.optimals}
+                onChange={(e) => handleChange('optimals', e.target.value)}
+                placeholder="Describe the ideal performance. What should they be doing?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Standards & Expectations</label>
+              <CheckboxGroup 
+                field="standardsChecklist"
+                selected={formData.standardsChecklist}
+                options={['SOPs', 'Legal Regs', 'KPIs/Metrics', 'Customer Vision', 'Safety Code', 'Quality Rubric']}
+              />
+              <textarea 
+                className="w-full p-2 border rounded-md h-24 focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.standards}
+                onChange={(e) => handleChange('standards', e.target.value)}
+                placeholder="Specific metrics or details..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Who wants this & Why?</label>
+              <textarea 
+                className="w-full p-2 border rounded-md h-36 focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.whoWantsIt}
+                onChange={(e) => handleChange('whoWantsIt', e.target.value)}
+                placeholder="Stakeholders driving this request."
+              />
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Actuals & The Gap",
+      icon: <Search className="w-6 h-6" />,
+      content: (
+        <div className="space-y-6">
+           {/* Analysis Tip */}
+           <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+            <h3 className="font-bold text-blue-800 flex items-center gap-2">
+              <Info className="w-4 h-4"/> Analysis Tip:
+            </h3>
+            <p className="text-sm text-blue-800 mt-1">Don't rely on assumptions. Use "Data Triangulation" (Obs, Docs, Interviews) to find the truth. The Gap is strictly the difference between Desired and Actual.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">2. What is Happening Now? (Actuals)</label>
+              <textarea 
+                className="w-full p-2 border rounded-md h-32 focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.actuals}
+                onChange={(e) => handleChange('actuals', e.target.value)}
+                placeholder="Describe current behavior objectively."
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data Sources (Evidence)</label>
+              <CheckboxGroup 
+                field="evidenceChecklist"
+                selected={formData.evidenceChecklist}
+                options={['Direct Observation', 'Interviews', 'Work Samples', 'Surveys', 'Company Reports', 'Customer Feedback']}
+              />
+              <textarea 
+                className="w-full p-2 border rounded-md h-20 focus:ring-2 focus:ring-pink-400 outline-none"
+                value={formData.evidence}
+                onChange={(e) => handleChange('evidence', e.target.value)}
+                placeholder="Specific details on evidence..."
+              />
+            </div>
+
+            {/* Gap Section - now pink */}
+            <div className="col-span-2 bg-pink-50 p-4 rounded-md border border-pink-100"> 
+              <label className="block text-sm font-bold text-pink-800 mb-1">3. The Gap (Delta)</label> 
+              <textarea 
+                className="w-full p-2 border rounded-md h-24 focus:ring-2 focus:ring-pink-200 outline-none" 
+                value={formData.gapDescription}
+                onChange={(e) => handleChange('gapDescription', e.target.value)}
+                placeholder="Summarize the specific difference between Ideal and Actual."
+              />
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                   <label className="block text-xs font-bold text-pink-800 mb-1">Impact Type</label> 
+                   <CheckboxGroup 
+                    field="gapImpactChecklist"
+                    selected={formData.gapImpactChecklist}
+                    options={['Cost', 'Safety', 'Quality', 'Morale', 'Compliance', 'Time/Efficiency']}
+                  />
+                  <input 
+                    type="text" 
+                    className="w-full p-2 border rounded-md text-sm mt-1"
+                    value={formData.gapCost}
+                    onChange={(e) => handleChange('gapCost', e.target.value)}
+                    placeholder="Specific Cost/Impact details"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-pink-800 mb-1">Priority</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-2 border rounded-md text-sm"
+                    value={formData.gapImportance}
+                    onChange={(e) => handleChange('gapImportance', e.target.value)}
+                    placeholder="Why solve this now?"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Supports & Interference",
+      icon: <AlertTriangle className="w-6 h-6" />,
+      content: (
+        <div className="space-y-6">
+           {/* Expert Tip - now amber */}
+           <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 mb-6">
+            <h3 className="font-bold text-amber-800 flex items-center gap-2">
+              <Info className="w-4 h-4"/> Expert Tip:
+            </h3>
+            <p className="text-sm text-amber-800 mt-1">Look for *existing* supports first. Often the solution isn't "new training," but fixing the job aids that nobody uses. For Interferences, remember: Skills are only one small part of the problem.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Supports Section */}
+            <div className="col-span-2 md:col-span-1 space-y-4">
+              <h4 className="font-bold text-gray-800 border-b pb-2">4. Supports</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What exists now?</label>
+                <CheckboxGroup 
+                  field="supportsChecklist"
+                  selected={formData.supportsChecklist}
+                  options={['Formal Training', 'Job Aids/Cheat Sheets', 'Help Desk', 'Coaches/Mentors', 'Documentation']}
+                />
+                <textarea 
+                  className="w-full p-2 border rounded-md h-24 focus:ring-2 focus:ring-pink-400 outline-none"
+                  value={formData.existingSupports}
+                  onChange={(e) => handleChange('existingSupports', e.target.value)}
+                  placeholder="Details on supports..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Is it used? Why/Why not?</label>
+                <textarea 
+                  className="w-full p-2 border rounded-md h-24 focus:ring-2 focus:ring-pink-400 outline-none"
+                  value={formData.supportUsage}
+                  onChange={(e) => handleChange('supportUsage', e.target.value)}
+                  placeholder="Often ignored? Hard to find? Outdated?"
+                />
+              </div>
+            </div>
+
+             {/* Interferences Section */}
+             <div className="col-span-2 md:col-span-1 space-y-4">
+              <h4 className="font-bold text-orange-700 border-b pb-2">5. Interferences (Root Causes)</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Environment & Tools</label>
+                <CheckboxGroup 
+                  field="envChecklist"
+                  selected={formData.envChecklist}
+                  options={['Tools Unavailable', 'Broken Process', 'Lack of Time', 'Unclear Authority', 'Distractions']}
+                />
+                <textarea 
+                  className="w-full p-2 border rounded-md h-20 focus:ring-2 focus:ring-orange-400 outline-none" 
+                  value={formData.envObstacles}
+                  onChange={(e) => handleChange('envObstacles', e.target.value)}
+                  placeholder="Details..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Incentives & Motivation</label>
+                <CheckboxGroup 
+                  field="incentiveChecklist"
+                  selected={formData.incentiveChecklist}
+                  options={['No Feedback', 'Punished for Good Work', 'Rewarded for Bad Work', 'No Consequences']}
+                />
+                <textarea 
+                  className="w-full p-2 border rounded-md h-20 focus:ring-2 focus:ring-orange-400 outline-none" 
+                  value={formData.incentiveObstacles}
+                  onChange={(e) => handleChange('incentiveObstacles', e.target.value)}
+                  placeholder="Details..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Skills & Knowledge</label>
+                <CheckboxGroup 
+                  field="skillChecklist"
+                  selected={formData.skillChecklist}
+                  options={['Knowledge Deficit', 'Skill Deficit', 'Aptitude/Capacity']}
+                />
+                <textarea 
+                  className="w-full p-2 border rounded-md h-20 focus:ring-2 focus:ring-orange-400 outline-none" 
+                  value={formData.skillObstacles}
+                  onChange={(e) => handleChange('skillObstacles', e.target.value)}
+                  placeholder="Do they actually not know how?"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Triangulation & Review",
+      icon: <Database className="w-6 h-6" />,
+      content: (
+        <div className="space-y-6">
+           {/* Expert Tip - now amber */}
+           <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 mb-6">
+            <h3 className="font-bold text-amber-800 flex items-center gap-2">
+              <Info className="w-4 h-4"/> Deep Dive: Exemplary Performers
+            </h3>
+            <p className="text-sm text-amber-800 mt-1">Study your "stars." If one person can do it in the current environment, it might not be an environmental problem—it might be a hidden trick they use.</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Exemplary Performer Analysis</label>
+                <textarea 
+                  className="w-full p-2 border rounded-md h-24 focus:ring-2 focus:ring-pink-400 outline-none"
+                  value={formData.exemplaryPerformers}
+                  onChange={(e) => handleChange('exemplaryPerformers', e.target.value)}
+                  placeholder="What do the top 10% do differently? Do they have cheat sheets? Do they ignore the official process?"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Source Checklist (Triangulation)</label>
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {['interviews', 'observations', 'documents', 'surveys'].map((source) => (
+                     <label key={source} className="flex items-center gap-2 cursor-pointer bg-white border p-3 rounded-md hover:bg-pink-100"> 
+                        <input 
+                          type="checkbox" 
+                          checked={formData.dataSources[source]} 
+                          onChange={() => handleCheckbox(source)}
+                          className="w-4 h-4 text-pink-500 rounded" 
+                        />
+                        <span className="capitalize">{source}</span>
+                     </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Recommendations & Strategy</label>
+                <textarea 
+                  className="w-full p-2 border rounded-md h-32 focus:ring-2 focus:ring-pink-400 outline-none"
+                  value={formData.recommendations}
+                  onChange={(e) => handleChange('recommendations', e.target.value)}
+                  placeholder="Based on the analysis, what should be done? (Training, Job Aids, Process Change, Feedback Systems?)"
+                />
+              </div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-pink-50 p-4 md:p-8 font-sans text-slate-800"> 
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden">
+        
+        {/* Header */}
+        <div className="bg-orange-500 text-white p-6 flex justify-between items-center"> 
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <BookOpen className="w-6 h-6 text-pink-200" /> 
+              HPT Performance Analysis Tool
+            </h1>
+            <p className="text-orange-100 text-sm mt-1">A structured HPT framework for needs assessment</p> 
+          </div>
+          <div className="flex gap-2">
+            <button onClick={manualSave} className="flex items-center gap-1 px-3 py-1.5 bg-orange-700 hover:bg-orange-600 rounded text-xs transition-colors"> 
+              <Save className="w-4 h-4" /> Save Local
+            </button>
+             <button onClick={clearData} className="flex items-center gap-1 px-3 py-1.5 bg-orange-700 hover:bg-red-500 rounded text-xs transition-colors"> 
+              <Trash2 className="w-4 h-4" /> Reset
+            </button>
+          </div>
+        </div>
+
+        {/* Saved Toast */}
+        {showSavedMsg && (
+          <div className="bg-green-100 text-green-800 text-center py-2 text-sm font-medium border-b border-green-200">
+            Progress saved to browser local storage.
+          </div>
+        )}
+
+        {/* Progress Bar */}
+        <div className="flex border-b border-pink-100">
+          {steps.map((step, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentStep(index)}
+              className={`flex-1 py-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors
+                ${currentStep === index ? 'text-pink-600 border-b-2 border-pink-600 bg-pink-50' : 'text-gray-500 hover:bg-pink-50'}`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${currentStep === index ? 'bg-pink-500 text-white' : 'bg-gray-200'}`}>
+                {index + 1}
+              </span>
+              <span className="hidden md:inline">{step.title}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Content Area */}
+        <div className="p-6 md:p-8 min-h-[500px]">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-slate-800">
+            {steps[currentStep].icon}
+            {steps[currentStep].title}
+          </h2>
+          {steps[currentStep].content}
+        </div>
+
+        {/* Footer / Navigation */}
+        <div className="bg-pink-50 p-6 border-t flex justify-between items-center">
+          <button 
+            onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
+            disabled={currentStep === 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors
+              ${currentStep === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-slate-700 hover:bg-pink-100 bg-white border border-pink-200'}`}
+          >
+            <ChevronLeft className="w-4 h-4" /> Previous
+          </button>
+
+          {currentStep === steps.length - 1 ? (
+             <div className="flex flex-wrap gap-3">
+               <button 
+                onClick={downloadWordDoc}
+                className="flex items-center gap-2 px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-md font-medium shadow-sm transition-colors"
+              >
+                <FileText className="w-4 h-4" /> Download Word (.doc)
+              </button>
+               <button 
+                onClick={downloadCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md font-medium shadow-sm transition-colors"
+              >
+                <Database className="w-4 h-4" /> Export CSV
+              </button>
+              <button 
+                onClick={copyForClipboard}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md font-medium shadow-sm transition-colors"
+              >
+                <Copy className="w-4 h-4" /> Copy Text
+              </button>
+             </div>
+          ) : (
+            <button 
+              onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
+              className="flex items-center gap-2 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md font-medium shadow-sm transition-colors"
+            >
+              Next Step <ChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+      </div>
+      <div className="max-w-4xl mx-auto mt-4 text-center text-gray-400 text-xs">
+        Based on standard HPT (Human Performance Technology) frameworks.
+      </div>
+    </div>
+  );
+};
+
+export default PerformanceAnalyzer; 
